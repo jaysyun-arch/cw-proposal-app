@@ -438,17 +438,27 @@ function handleImgs(inp){
     };r.readAsDataURL(f);
   });
 }
+function normalizeKey(s){
+  // 공백과 언더스코어를 통일, 소문자화
+  return s.toLowerCase().replace(/[\s_]+/g,'');
+}
 function extractRoadKeys(addr){
   var keys=[];
   var clean=addr.replace(/^서울\s*(특별시)?\s*/,'').replace(/^[가-힣]+[구군]\s*/,'').trim();
-  // 전체 도로명+번지를 언더스코어로
+  // 1. 공백→언더스코어 (표준)
   keys.push(clean.replace(/\s+/g,'_'));
-  // 마지막 두 토큰 (도로명 번지)
+  // 2. 공백 완전 제거 (연무장3길_9 → 연무장3길9 매칭용)
+  keys.push(clean.replace(/\s+/g,''));
+  // 3. 쉼표 처리 버전 (연무장길 10-1, 5)
+  keys.push(clean.replace(/,\s*/g,'_').replace(/\s+/g,'_'));
+  // 4. 마지막 두 단어
   var parts=clean.split(/\s+/);
   if(parts.length>=2) keys.push(parts.slice(-2).join('_'));
-  if(parts.length>=1) keys.push(parts[parts.length-1]);
-  // 공백 없이 붙인 버전
-  keys.push(clean.replace(/\s+/g,''));
+  if(parts.length>=2) keys.push(parts.slice(-2).join(''));
+  // 5. 로/길/대로 등 접미사 제거 버전 (뚝섬로17가길→뚝섬17가길 매칭)
+  var stripped=clean.replace(/[로길대로이로가길나로다로]+(?=\d)/g,'').replace(/\s+/g,'_');
+  keys.push(stripped);
+  keys.push(stripped.replace(/_/g,''));
   return keys.map(function(k){return k.toLowerCase();}).filter(function(k){return k.length>1;});
 }
 function mapImgs(){
@@ -460,13 +470,18 @@ function mapImgs(){
     var isP=nl.includes('_사진')||nl.includes('_photo');
     var isF=nl.includes('_도면')||nl.includes('_floor');
     if(!isP&&!isF){unm.push(img.name);return}
-    // 파일명에서 타입 키워드 앞부분을 주소 키로
+    // 파일명에서 타입 키워드 앞부분 추출
     var addrPart=base.replace(/_사진.*$/,'').replace(/_photo.*$/,'').replace(/_도면.*$/,'').replace(/_floor.*$/,'');
+    var addrNorm=normalizeKey(addrPart); // 공백/언더스코어 제거한 정규화 키
     var matched=props.find(function(p){
       var keys=extractRoadKeys(p.addr);
-      return keys.some(function(k){ return addrPart===k; }) ||
-             keys.some(function(k){ return addrPart.endsWith(k) || addrPart.startsWith(k); }) ||
-             keys.some(function(k){ return nl.startsWith(k+'_') || nl.startsWith(k.replace(/_/g,'')); });
+      return keys.some(function(k){
+        // 완전 일치
+        if(addrPart===k) return true;
+        // 정규화 후 일치 (공백/언더스코어 무시)
+        if(normalizeKey(k)===addrNorm) return true;
+        return false;
+      });
     });
     if(matched){if(isP)matched.photos.push(img.src);else matched.floors.push(img.src);}
     else unm.push(img.name);
