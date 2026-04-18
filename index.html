@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C&W 물건제안서 자동생성</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --red:#D22027;--dark:#2C2C2A;--mid:#5F5E5A;--light:#F1EFE8;
+  --border:#E0DED8;--bg:#F7F6F3;--white:#FFFFFF;
+  --green:#3B6D11;--blue:#185FA5;
+  --text:#2C2C2A;--text2:#5F5E5A;--text3:#888780;
+}
+body{font-family:'Noto Sans KR',sans-serif;font-size:13px;color:var(--text);background:var(--bg);min-height:100vh}
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 20px;background:var(--white);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{font-size:13px;font-weight:700;color:var(--red);letter-spacing:1px}
+.topbar-div{width:1px;height:18px;background:var(--border)}
+.topbar-title{font-size:12px;color:var(--text2)}
+.topbar-right{margin-left:auto}
+.topbar-status{font-size:11px;color:var(--text3);background:var(--bg);padding:3px 10px;border-radius:20px;border:1px solid var(--border)}
+.steps{display:flex;background:var(--white);border-bottom:1px solid var(--border)}
+.step{flex:1;padding:12px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s}
+.step:hover{background:var(--bg)}
+.step.on{border-bottom-color:var(--red)}
+.step.done .snum{background:var(--green);border-color:var(--green);color:#fff}
+.snum{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;color:var(--text3);transition:all .2s}
+.step.on .snum{background:var(--red);border-color:var(--red);color:#fff}
+.slbl{font-size:11px;color:var(--text2)}
+.step.on .slbl{color:var(--text);font-weight:500}
+.sarr{font-size:11px;color:var(--border);margin-left:auto}
+.view{display:none;padding:24px;max-width:1100px;margin:0 auto}
+.view.on{display:block}
+.btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--white);color:var(--text);font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn:hover{background:var(--bg)}
+.btn-red{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-red:hover{background:#b81c21}
+.btn-blue{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-blue:hover{background:#0c447c}
+.btn-lg{padding:11px 20px;font-size:13px;font-weight:500;border-radius:8px}
+.sec{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin:20px 0 10px}
+.sec:first-child{margin-top:0}
+.uz{border:1.5px dashed var(--border);border-radius:10px;padding:30px 20px;text-align:center;cursor:pointer;background:var(--white);display:block;margin-bottom:16px;transition:all .2s}
+.uz:hover{background:var(--bg);border-color:#bbb}
+.uz.has{border-color:var(--green);border-style:solid;background:#f0f9ec}
+.uz-icon{font-size:28px;margin-bottom:8px}
+.uz-title{font-size:14px;font-weight:500;margin-bottom:4px}
+.uz-sub{font-size:11px;color:var(--text2)}
+.uz-ok{font-size:12px;color:var(--green);font-weight:500;margin-top:6px;display:none}
+.notice{background:#fffbf0;border:1px solid #ffe9a0;border-radius:8px;padding:12px 15px;font-size:11px;color:var(--text2);line-height:1.8;margin-bottom:16px}
+.notice strong{color:var(--text);font-weight:500}
+.cspec{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:16px}
+.cspec table{width:100%;border-collapse:collapse;font-size:11px}
+.cspec th{padding:8px 12px;background:var(--dark);color:#fff;font-weight:500;text-align:left;font-size:10px}
+.cspec td{padding:6px 12px;border-bottom:1px solid var(--border)}
+.cspec tr:last-child td{border-bottom:none}
+.cspec tr:nth-child(even) td{background:var(--bg)}
+.ck{font-family:monospace;font-size:10px;background:var(--light);padding:2px 6px;border-radius:4px;font-weight:700;color:var(--red)}
+.ptable-wrap{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;overflow-x:auto}
+.ptable{width:100%;border-collapse:collapse;font-size:11px;min-width:900px}
+.ptable th{padding:8px 10px;background:var(--dark);color:#fff;font-weight:500;font-size:10px;text-align:left;white-space:nowrap}
+.ptable td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.ptable tr:last-child td{border-bottom:none}
+.ptable tr:hover td{background:var(--bg)}
+.ptable tbody tr.selected td{background:#fff5f5}
+.chk{width:14px;height:14px;cursor:pointer;accent-color:var(--red)}
+.badge{font-size:9px;padding:2px 7px;border-radius:20px;font-weight:500;white-space:nowrap}
+.bnew{background:#FCEBEB;color:#A32D2D}
+.bprev{background:#E6F1FB;color:#185FA5}
+.bsign{background:#FAEEDA;color:#854F0B}
+.bneg{background:#EEEDFE;color:#3C3489}
+.rulebox{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:14px}
+.rrow{display:flex;gap:10px;margin-bottom:10px}
+.rrow:last-child{margin-bottom:0}
+.rdot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.rtxt{font-size:11px;color:var(--text2);line-height:1.7}
+.rtxt code{font-family:monospace;font-size:10px;background:var(--light);padding:1px 6px;border-radius:4px}
+.rtxt strong{color:var(--text);font-weight:500}
+.imt{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.imt table{width:100%;border-collapse:collapse;font-size:11px}
+.imt th{padding:8px 12px;background:var(--dark);color:#fff;font-weight:500;font-size:10px;text-align:left}
+.imt td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.imt tr:last-child td{border-bottom:none}
+.thumb{width:36px;height:28px;object-fit:cover;border-radius:4px;border:1px solid var(--border)}
+.trow{display:flex;gap:4px;flex-wrap:wrap}
+/* STEP 3 */
+.map-step3{display:flex;gap:16px}
+.map-left{flex:1;min-width:0}
+.map-right{width:220px;flex-shrink:0;display:flex;flex-direction:column;gap:10px}
+.map-wrap{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.map-hd{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--dark);color:#fff}
+.map-hd-title{font-size:12px;font-weight:500;flex:1}
+.map-body{position:relative;min-height:340px;background:#ddd6cb;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#map-canvas{display:block;cursor:crosshair;max-width:100%}
+.map-ph{text-align:center;padding:30px 20px}
+.map-ph-icon{font-size:32px;margin-bottom:10px}
+.map-ph-title{font-size:13px;color:var(--text2);margin-bottom:4px;font-weight:500}
+.map-ph-sub{font-size:11px;color:var(--text3);line-height:1.7}
+.map-ft{display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--white);border-top:1px solid var(--border)}
+.map-st{font-size:11px;color:var(--text2);flex:1}
+.map-st.ok{color:var(--green);font-weight:500}
+.pin-list-box{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;flex:1}
+.pin-list-hd{padding:9px 13px;background:var(--dark);color:#fff;font-size:11px;font-weight:500}
+.pin-list-body{padding:8px}
+.pin-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;border:1.5px solid transparent;margin-bottom:4px;transition:all .15s}
+.pin-item:last-child{margin-bottom:0}
+.pin-item:hover{background:var(--bg)}
+.pin-item.active{border-color:var(--blue);background:#EEF4FF}
+.pin-item.placed{background:var(--bg)}
+.pin-bubble{width:24px;height:24px;border-radius:50%;background:var(--red);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s}
+.pin-bubble.placed{background:var(--green)}
+.pin-bubble.inactive{background:var(--border);color:var(--text3)}
+.pin-addr{font-size:10px;flex:1;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)}
+.pin-undo{font-size:10px;color:var(--text3);cursor:pointer;padding:2px 5px;border-radius:3px}
+.pin-undo:hover{background:#fee2e2;color:var(--red)}
+.pin-hint{font-size:10px;color:var(--text3);text-align:center;padding:12px;line-height:1.6}
+.map-actions{display:flex;flex-direction:column;gap:6px}
+.confirmed-thumb{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:10px}
+.confirmed-thumb-label{font-size:10px;color:var(--green);font-weight:500;margin-bottom:6px}
+.confirmed-thumb img{width:100%;border-radius:5px}
+/* STEP 4 */
+.scards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.sc{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.sc-l{font-size:10px;color:var(--text3);margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+.sc-v{font-size:26px;font-weight:700;line-height:1.1}
+.sc-s{font-size:10px;color:var(--text3);margin-top:3px}
+.sflow{display:flex;flex-direction:column;gap:6px;margin-bottom:20px}
+.sfrow{display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--white);border:1px solid var(--border);border-radius:8px}
+.sfnum{width:24px;height:24px;border-radius:50%;background:var(--red);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sfnum.g{background:var(--light);color:var(--text2);border:1px solid var(--border)}
+.sfnum.m{background:var(--blue);color:#fff}
+.sfinfo{flex:1}
+.sftype{font-size:12px;font-weight:500}
+.sfdesc{font-size:10px;color:var(--text3);margin-top:2px}
+.sftags{display:flex;gap:4px;flex-shrink:0}
+.sftag{font-size:9px;padding:2px 7px;border-radius:20px}
+.sftag.ph{background:#e0f7ed;color:#085041}
+.sftag.fl{background:#ddeeff;color:#0C447C}
+.sftag.sk{background:var(--light);color:var(--text3)}
+.sftag.mp{background:#ddeeff;color:var(--blue)}
+.gen-opts{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:16px}
+.gen-row{display:flex;gap:12px;margin-bottom:14px}
+.gen-row:last-child{margin-bottom:0}
+.gen-row>div{flex:1}
+.fi-lbl{font-size:11px;color:var(--text2);display:block;margin-bottom:5px;font-weight:500}
+.fi{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit;color:var(--text);background:var(--white)}
+.fi:focus{outline:none;border-color:var(--red)}
+.bbar{position:sticky;bottom:0;padding:12px 20px;background:var(--white);border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;box-shadow:0 -2px 8px rgba(0,0,0,.05)}
+.bbinfo{font-size:11px;color:var(--text2);flex:1}
+.bbinfo strong{color:var(--text);font-weight:600}
+/* 제안서 출력 모달 */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center}
+.modal-bg.on{display:flex}
+.modal{background:var(--white);border-radius:12px;width:560px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.modal-title{font-size:14px;font-weight:600}
+.modal-x{cursor:pointer;font-size:18px;color:var(--text3);line-height:1}
+.modal-body{flex:1;overflow-y:auto;padding:18px}
+.modal-text{font-size:11px;color:var(--text2);background:var(--bg);border-radius:8px;padding:14px;line-height:1.9;white-space:pre-wrap;font-family:monospace;border:1px solid var(--border)}
+.modal-ft{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+@media(max-width:700px){
+  .map-step3{flex-direction:column}
+  .map-right{width:100%}
+  .scards{grid-template-columns:repeat(2,1fr)}
+  .steps .sarr{display:none}
+  .slbl{font-size:10px}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="logo">C&W</span>
+  <div class="topbar-div"></div>
+  <span class="topbar-title">물건제안서 자동생성</span>
+  <div class="topbar-right">
+    <span class="topbar-status" id="ts">Step 1부터 시작하세요</span>
+  </div>
+</div>
+
+<div class="steps">
+  <div class="step on" id="s1" onclick="gs(1)"><div class="snum" id="n1">1</div><div class="slbl">엑셀 업로드 &amp; 물건 선택</div><div class="sarr">›</div></div>
+  <div class="step" id="s2" onclick="gs(2)"><div class="snum" id="n2">2</div><div class="slbl">이미지 폴더 업로드</div><div class="sarr">›</div></div>
+  <div class="step" id="s3" onclick="gs(3)"><div class="snum" id="n3">3</div><div class="slbl">지도 &amp; 핀 배치</div><div class="sarr">›</div></div>
+  <div class="step" id="s4" onclick="gs(4)"><div class="snum" id="n4">4</div><div class="slbl">제안서 생성</div></div>
+</div>
+
+<!-- STEP 1 -->
+<div class="view on" id="v1">
+  <div class="sec">엑셀 DB 업로드</div>
+  <label class="uz" id="ez">
+    <input type="file" accept=".xlsx,.xls" style="display:none" id="ei" onchange="handleExcel(this)">
+    <div class="uz-icon">📊</div>
+    <div class="uz-title">엑셀 파일 클릭하여 업로드</div>
+    <div class="uz-sub">물건 정보가 담긴 .xlsx 파일 / 데이터는 4행부터 시작</div>
+    <div class="uz-ok" id="eok"></div>
+  </label>
+  <div class="sec">컬럼 구조 (표준)</div>
+  <div class="cspec"><table>
+    <tr><th>열</th><th>항목</th><th>열</th><th>항목</th></tr>
+    <tr><td><span class="ck">A</span></td><td>No.</td><td><span class="ck">H</span></td><td>월임대료</td></tr>
+    <tr><td><span class="ck">B</span></td><td>구분</td><td><span class="ck">I</span></td><td>관리비</td></tr>
+    <tr><td><span class="ck">C</span></td><td>주소</td><td><span class="ck">J</span></td><td>인도시기</td></tr>
+    <tr><td><span class="ck">D</span></td><td>층수</td><td><span class="ck">K</span></td><td>상태</td></tr>
+    <tr><td><span class="ck">E</span></td><td>전용(py)</td><td><span class="ck">L</span></td><td>특이사항</td></tr>
+    <tr><td><span class="ck">F</span></td><td>전용(㎡)</td><td><span class="ck">M</span></td><td>PPT포함 ✓/✗</td></tr>
+    <tr><td><span class="ck">G</span></td><td>보증금</td><td></td><td></td></tr>
+  </table></div>
+  <div id="plwrap" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="sec" style="margin:0">물건 목록 — 제안할 물건 선택</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn" onclick="checkAll(true)">전체 선택</button>
+        <button class="btn" onclick="checkAll(false)">전체 해제</button>
+      </div>
+    </div>
+    <div class="ptable-wrap">
+      <table class="ptable">
+        <thead><tr>
+          <th style="width:34px;text-align:center">선택</th>
+          <th>No.</th><th>주소</th><th>층수</th><th>전용(㎡)</th>
+          <th>보증금</th><th>월임대료</th><th>관리비</th><th>인도시기</th><th>상태</th><th>특이사항</th>
+        </tr></thead>
+        <tbody id="ptb"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 2 -->
+<div class="view" id="v2">
+  <div class="notice"><strong>이미지 업로드 방법</strong><br>폴더 안의 파일을 <strong>전체 선택(Ctrl+A)</strong>해서 업로드하세요. 파일명 규칙에 따라 물건에 자동 매핑됩니다. 이미지 없이 다음 단계로 넘어갈 수 있습니다.</div>
+  <div class="sec">파일명 규칙</div>
+  <div class="rulebox">
+    <div class="rrow"><div class="rdot" style="background:var(--green)"></div><div class="rtxt"><strong>매장 사진</strong> — Overview 슬라이드 좌측 배치<br>파일명에 <code>_사진</code> 또는 <code>_photo</code> 포함 &nbsp;예: <code>와우산로_94_사진1.jpg</code></div></div>
+    <div class="rrow"><div class="rdot" style="background:var(--blue)"></div><div class="rtxt"><strong>도면</strong> — Floor Plan 슬라이드 별도 생성 (없으면 건너뜀)<br>파일명에 <code>_도면</code> 또는 <code>_floor</code> 포함 &nbsp;예: <code>와우산로_94_도면.png</code></div></div>
+    <div class="rrow"><div class="rdot" style="background:#888780"></div><div class="rtxt"><strong>물건 매핑</strong> — 파일명의 도로명으로 자동 매핑<br>예: <code>와우산로_94_사진1.jpg</code> → 주소에 "와우산로 94" 포함된 물건에 연결</div></div>
+  </div>
+  <label class="uz" id="iz">
+    <input type="file" accept="image/*" multiple style="display:none" id="ii" onchange="handleImgs(this)">
+    <div class="uz-icon">🗂</div>
+    <div class="uz-title">이미지 파일 클릭하여 업로드</div>
+    <div class="uz-sub">폴더 안 파일 전체 선택(Ctrl+A) 후 열기</div>
+    <div class="uz-ok" id="iok"></div>
+  </label>
+  <div id="imtwrap" style="display:none">
+    <div class="sec">매핑 결과</div>
+    <div class="imt"><table>
+      <thead><tr><th>물건 주소</th><th>매장 사진</th><th>도면</th></tr></thead>
+      <tbody id="imtb"></tbody>
+    </table></div>
+    <div id="unmwrap" style="display:none">
+      <div class="sec">미매핑 파일</div>
+      <div id="unmlist" style="font-size:11px;color:var(--text2);background:var(--white);border:1px solid var(--border);border-radius:8px;padding:10px 14px;line-height:2"></div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 3 -->
+<div class="view" id="v3">
+  <div class="notice"><strong>사용법</strong> — ① 카카오맵(map.kakao.com) 캡처 이미지 업로드 → ② 오른쪽 목록에서 물건 번호 클릭 → ③ 지도 위 해당 위치 클릭하여 핀 배치 → ④ <strong>지도 확정</strong> 버튼 클릭<br>지도 없이 건너뛰면 지도 슬라이드가 생략됩니다.</div>
+  <div class="map-step3">
+    <div class="map-left">
+      <div class="map-wrap">
+        <div class="map-hd">
+          <div class="map-hd-title">지도</div>
+          <label style="cursor:pointer"><input type="file" accept="image/*" style="display:none" id="mi" onchange="loadMapImg(this)"><span class="btn btn-red" style="font-size:11px">지도 이미지 업로드</span></label>
+          <button class="btn" id="clear-map-btn" onclick="clearAll()" style="display:none;margin-left:6px;font-size:11px;background:transparent;color:#aaa;border-color:#555">초기화</button>
+        </div>
+        <div class="map-body" id="map-canvas-body">
+          <canvas id="map-canvas" style="display:none"></canvas>
+          <div id="map-ph" class="map-ph">
+            <div class="map-ph-icon">🗺</div>
+            <div class="map-ph-title">지도 이미지를 업로드하세요</div>
+            <div class="map-ph-sub">카카오맵(map.kakao.com) 캡처 이미지 권장<br>업로드 후 오른쪽에서 물건을 선택해 핀을 찍으세요</div>
+          </div>
+        </div>
+        <div class="map-ft">
+          <div class="map-st" id="map-st">지도 미업로드 — 이미지를 업로드하세요</div>
+          <button class="btn btn-blue" id="confirm-map-btn" onclick="confirmMap()" style="display:none">지도 확정 →</button>
+        </div>
+      </div>
+    </div>
+    <div class="map-right">
+      <div class="pin-list-box">
+        <div class="pin-list-hd">물건 목록 (핀 배치)</div>
+        <div class="pin-list-body" id="pin-list">
+          <div class="pin-hint">Step 1에서 물건을<br>먼저 선택하세요</div>
+        </div>
+      </div>
+      <div class="map-actions">
+        <button class="btn" onclick="undoLast()" style="width:100%">↩ 마지막 핀 취소</button>
+        <button class="btn" onclick="resetPins()" style="width:100%">전체 핀 초기화</button>
+      </div>
+      <div class="confirmed-thumb" id="confirmed-thumb" style="display:none">
+        <div class="confirmed-thumb-label">✓ 확정된 지도</div>
+        <img id="confirmed-img">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 4 -->
+<div class="view" id="v4">
+  <div class="scards">
+    <div class="sc"><div class="sc-l">선택된 물건</div><div class="sc-v" id="sv1">0</div><div class="sc-s">개</div></div>
+    <div class="sc"><div class="sc-l">예상 슬라이드</div><div class="sc-v" id="sv2">0</div><div class="sc-s">장</div></div>
+    <div class="sc"><div class="sc-l">이미지 등록</div><div class="sc-v" id="sv3">0</div><div class="sc-s">건</div></div>
+    <div class="sc"><div class="sc-l">지도 슬라이드</div><div class="sc-v" id="sv4">-</div><div class="sc-s" id="sv4s">미설정</div></div>
+  </div>
+  <div class="sec">슬라이드 구성 미리보기</div>
+  <div class="sflow" id="sflow"></div>
+  <div class="sec">생성 옵션</div>
+  <div class="gen-opts">
+    <div class="gen-row">
+      <div><label class="fi-lbl">클라이언트 (브랜드명)</label><input class="fi" id="gclient" placeholder="예: 무신사 스탠다드"></div>
+      <div><label class="fi-lbl">담당 어드바이저</label><input class="fi" id="gadvisor" placeholder="예: 홍길동"></div>
+    </div>
+  </div>
+  <button class="btn btn-red btn-lg" style="width:100%" onclick="doGen()">PPT 제안서 생성 ↗</button>
+</div>
+
+<div class="bbar">
+  <div class="bbinfo">선택: <strong id="bbp">0</strong>개 &nbsp;·&nbsp; 이미지: <strong id="bbi">0</strong>건 &nbsp;·&nbsp; 지도: <strong id="bbm">미설정</strong> &nbsp;·&nbsp; 슬라이드: <strong id="bbs">0</strong>장</div>
+  <button class="btn" id="prevbtn" style="display:none" onclick="goPrev()">← 이전</button>
+  <button class="btn btn-red" id="nextbtn" onclick="goNext()">다음 단계 →</button>
+</div>
+
+<!-- 제안서 생성 모달 -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <div class="modal-hd">
+      <span class="modal-title">제안서 생성 프롬프트</span>
+      <span class="modal-x" onclick="closeModal()">✕</span>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:11px;color:var(--text2);margin-bottom:10px">아래 내용을 복사해서 Claude 채팅창에 붙여넣기 하세요.</p>
+      <div class="modal-text" id="modal-text"></div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn" onclick="closeModal()">닫기</button>
+      <button class="btn btn-red" onclick="copyText()">📋 복사</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var props=[],imgs=[],cur=1,mapImgSrc=null,mapConfirmedSrc=null,pins=[],activePin=-1,mapImg=null;
+
+function gs(n){
+  if(n>1&&!props.length){alert('먼저 엑셀을 업로드하고 물건을 선택하세요');return}
+  cur=n;
+  [1,2,3,4].forEach(function(i){
+    document.getElementById('v'+i).className='view'+(i===n?' on':'');
+    document.getElementById('s'+i).className='step'+(i===n?' on':'')+(done(i)?' done':'');
+  });
+  if(n===3) renderPinList();
+  if(n===4) build4();
+  upd();
+}
+function done(n){
+  if(n===1) return props.length>0&&props.some(function(p){return p.sel});
+  if(n===2) return imgs.length>0;
+  if(n===3) return mapConfirmedSrc!==null;
+  return false;
+}
+function goNext(){
+  if(cur===1&&!props.filter(function(p){return p.sel}).length){alert('제안할 물건을 1개 이상 선택하세요');return}
+  if(cur<4) gs(cur+1);
+}
+function goPrev(){if(cur>1) gs(cur-1)}
+function calcSlides(sel){
+  if(!sel.length) return 0;
+  var n=3; if(mapConfirmedSrc) n++;
+  sel.forEach(function(p){n++;if(p.floors&&p.floors.length>0)n++;});
+  return n;
+}
+function upd(){
+  var sel=props.filter(function(p){return p.sel});
+  document.getElementById('bbp').textContent=sel.length;
+  document.getElementById('bbi').textContent=imgs.length;
+  document.getElementById('bbm').textContent=mapConfirmedSrc?'핀 '+pins.length+'개':'미설정';
+  document.getElementById('bbs').textContent=calcSlides(sel);
+  document.getElementById('prevbtn').style.display=cur>1?'':'none';
+  document.getElementById('nextbtn').style.display=cur<4?'':'none';
+  document.getElementById('ts').textContent='물건 '+sel.length+'개 · 이미지 '+imgs.length+'건 · 지도 '+(mapConfirmedSrc?'핀'+pins.length+'개':'미설정');
+  [1,2,3,4].forEach(function(i){
+    document.getElementById('s'+i).className='step'+(i===cur?' on':'')+(done(i)?' done':'');
+    document.getElementById('n'+i).textContent=done(i)?'✓':i;
+  });
+}
+function handleExcel(inp){
+  var f=inp.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var data=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      props=[];
+      for(var i=3;i<data.length;i++){
+        var row=data[i];
+        var addr=String(row[2]||'').trim();
+        if(!addr)continue;
+        props.push({id:i,no:row[0]||i-2,addr:addr,floor:row[3]||'',areaPy:row[4]||'',areaM:row[5]||'',dep:row[6]||'',rent:row[7]||'',mgmt:row[8]||'',handover:row[9]||'',stat:row[10]||'',note:row[11]||'',sel:String(row[12]).includes('✓'),photos:[],floors:[]});
+      }
+      document.getElementById('ez').className='uz has';
+      var ok=document.getElementById('eok');ok.style.display='block';ok.textContent='✓ '+f.name+' — 물건 '+props.length+'개 로드됨';
+      document.getElementById('plwrap').style.display='block';
+      renderPT();upd();
+    }catch(err){alert('엑셀 파싱 오류: '+err.message)}
+  };
+  r.readAsArrayBuffer(f);
+}
+function renderPT(){
+  document.getElementById('ptb').innerHTML=props.map(function(p){
+    var bc=getBc(p.stat);
+    return '<tr class="'+(p.sel?'selected':'')+'" id="row-'+p.id+'"><td style="text-align:center"><input type="checkbox" class="chk" '+(p.sel?'checked':'')+' onchange="tp('+p.id+',this.checked)"></td><td style="color:var(--text3)">'+p.no+'</td><td>'+p.addr+'</td><td style="white-space:nowrap">'+p.floor+'</td><td style="text-align:right">'+p.areaM+'</td><td style="text-align:right;white-space:nowrap">'+p.dep+'</td><td style="text-align:right;white-space:nowrap">'+p.rent+'</td><td style="white-space:nowrap">'+p.mgmt+'</td><td style="white-space:nowrap">'+p.handover+'</td><td><span class="badge '+bc+'">'+p.stat+'</span></td><td style="color:var(--text2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+p.note+'</td></tr>';
+  }).join('');
+}
+function getBc(s){var sl=String(s||'').toLowerCase();if(sl.includes('new'))return'bnew';if(sl.includes('prev'))return'bprev';if(sl.includes('sign'))return'bsign';if(sl.includes('neg')||sl.includes('final'))return'bneg';return''}
+function tp(id,v){
+  var p=props.find(function(x){return x.id===id});if(p)p.sel=v;
+  var row=document.getElementById('row-'+id);if(row)row.className=v?'selected':'';
+  upd();if(imgs.length>0)mapImgs();renderPinList();
+}
+function checkAll(v){props.forEach(function(p){p.sel=v});renderPT();upd();if(imgs.length>0)mapImgs();renderPinList();}
+function handleImgs(inp){
+  var files=Array.from(inp.files);if(!files.length)return;
+  imgs=[];var loaded=0;
+  files.forEach(function(f){
+    var r=new FileReader();
+    r.onload=function(e){
+      imgs.push({name:f.name,src:e.target.result});loaded++;
+      if(loaded===files.length){mapImgs();document.getElementById('iz').className='uz has';var ok=document.getElementById('iok');ok.style.display='block';ok.textContent='✓ 이미지 '+files.length+'개 업로드됨';upd();}
+    };r.readAsDataURL(f);
+  });
+}
+function extractRoad(addr){var m=addr.match(/([가-힣a-zA-Z0-9]+[로길대로]+\s?\d+(?:-\d+)?)/);if(m)return m[1].replace(/\s/g,'_');var parts=addr.split(' ');return parts.length>=3?parts.slice(-2).join('_').replace(/\s/g,'_'):null;}
+function mapImgs(){
+  props.forEach(function(p){p.photos=[];p.floors=[];});
+  var unm=[];
+  imgs.forEach(function(img){
+    var nl=img.name.toLowerCase();
+    var isP=nl.includes('_사진')||nl.includes('_photo');
+    var isF=nl.includes('_도면')||nl.includes('_floor');
+    if(!isP&&!isF){unm.push(img.name);return}
+    var matched=props.find(function(p){var rn=extractRoad(p.addr);return rn&&nl.includes(rn.toLowerCase());});
+    if(matched){if(isP)matched.photos.push(img.src);else matched.floors.push(img.src);}
+    else unm.push(img.name);
+  });
+  renderImt(unm);
+}
+function renderImt(unm){
+  document.getElementById('imtwrap').style.display='block';
+  var sel=props.filter(function(p){return p.sel});
+  var tb=document.getElementById('imtb');
+  if(!sel.length){tb.innerHTML='<tr><td colspan="3" style="padding:14px;text-align:center;color:var(--text3)">Step 1에서 물건을 먼저 선택하세요</td></tr>';return}
+  tb.innerHTML=sel.map(function(p){
+    return '<tr><td style="font-size:11px">'+p.addr+' <span style="color:var(--text3)">('+p.floor+')</span></td><td>'+(p.photos.length>0?'<div class="trow">'+p.photos.map(function(s){return'<img class="thumb" src="'+s+'">'}).join('')+'</div>':'<span style="font-size:10px;color:var(--text3)">없음</span>')+'</td><td>'+(p.floors.length>0?'<div class="trow">'+p.floors.map(function(s){return'<img class="thumb" src="'+s+'">'}).join('')+'</div>':'<span style="font-size:10px;color:var(--text3)">없음 (생략)</span>')+'</td></tr>';
+  }).join('');
+  var uw=document.getElementById('unmwrap');
+  if(unm.length){uw.style.display='block';document.getElementById('unmlist').innerHTML=unm.map(function(n){return'<div>• '+n+'</div>'}).join('');}
+  else uw.style.display='none';
+}
+function loadMapImg(inp){
+  var f=inp.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(e){
+    mapImgSrc=e.target.result;
+    mapImg=new Image();
+    mapImg.onload=function(){
+      initCanvas();
+      document.getElementById('map-ph').style.display='none';
+      document.getElementById('clear-map-btn').style.display='block';
+      document.getElementById('confirm-map-btn').style.display='block';
+      document.getElementById('map-st').textContent='지도 로드됨 — 오른쪽에서 물건 선택 후 위치 클릭';
+      pins=[];activePin=0;
+      renderPinList();redrawCanvas();
+    };
+    mapImg.src=e.target.result;
+  };
+  r.readAsDataURL(f);
+}
+function initCanvas(){
+  var body=document.getElementById('map-canvas-body');
+  var maxW=body.offsetWidth||560;
+  var ratio=mapImg.height/mapImg.width;
+  var w=Math.min(maxW,mapImg.width);
+  var h=Math.round(w*ratio);
+  var c=document.getElementById('map-canvas');
+  c.width=w;c.height=h;c.style.display='block';
+  c.onclick=onCanvasClick;
+}
+function onCanvasClick(e){
+  if(!mapImgSrc)return;
+  var sel=props.filter(function(p){return p.sel});
+  if(activePin<0||activePin>=sel.length){document.getElementById('map-st').textContent='오른쪽 목록에서 배치할 물건 번호를 먼저 클릭하세요';return;}
+  var c=document.getElementById('map-canvas');
+  var rect=c.getBoundingClientRect();
+  var x=Math.round((e.clientX-rect.left)*(c.width/rect.width));
+  var y=Math.round((e.clientY-rect.top)*(c.height/rect.height));
+  var ex=pins.findIndex(function(p){return p.idx===activePin});
+  if(ex>=0)pins.splice(ex,1);
+  pins.push({idx:activePin,x:x,y:y});
+  var next=findNext(sel);
+  activePin=next;
+  renderPinList();redrawCanvas();
+  document.getElementById('map-st').textContent=pins.length+'/'+sel.length+'개 배치됨'+(next>=0?' — 다음: '+(next+1)+'번 클릭':(pins.length===sel.length?' — 모두 배치 완료!':''));
+}
+function findNext(sel){for(var i=0;i<sel.length;i++){if(!pins.find(function(p){return p.idx===i}))return i;}return -1;}
+function redrawCanvas(){
+  if(!mapImg)return;
+  var c=document.getElementById('map-canvas');
+  var ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.drawImage(mapImg,0,0,c.width,c.height);
+  pins.forEach(function(pin){
+    var r=15,x=pin.x,y=pin.y,lbl=String(pin.idx+1);
+    var isAct=pin.idx===activePin;
+    var col=isAct?'#185FA5':'#D22027';
+    ctx.beginPath();ctx.arc(x,y-r,r,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=2.5;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x-6,y-2);ctx.lineTo(x+6,y-2);ctx.lineTo(x,y+5);ctx.closePath();ctx.fillStyle=col;ctx.fill();
+    ctx.font='bold 12px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#fff';ctx.fillText(lbl,x,y-r);
+  });
+}
+function renderPinList(){
+  var sel=props.filter(function(p){return p.sel});
+  var el=document.getElementById('pin-list');
+  if(!sel.length){el.innerHTML='<div class="pin-hint">Step 1에서 물건을<br>먼저 선택하세요</div>';return}
+  el.innerHTML=sel.map(function(p,i){
+    var placed=pins.find(function(pin){return pin.idx===i});
+    var isAct=activePin===i;
+    var cls='pin-item'+(isAct?' active':placed?' placed':'');
+    var bCls='pin-bubble'+(placed?' placed':isAct?'':' inactive');
+    var short=p.addr.replace(/^서울\s*(특별시)?\s*/,'').replace(/^[가-힣]+[구군]\s*/,'');
+    return '<div class="'+cls+'" onclick="setActive('+i+')"><div class="'+bCls+'">'+(i+1)+'</div><div class="pin-addr">'+short+'</div>'+(placed?'<span class="pin-undo" onclick="event.stopPropagation();removePin('+i+')" title="핀 제거">✕</span>':'')+'</div>';
+  }).join('');
+}
+function setActive(i){
+  if(!mapImgSrc){alert('지도 이미지를 먼저 업로드하세요');return}
+  activePin=i;renderPinList();redrawCanvas();
+  document.getElementById('map-st').textContent=(i+1)+'번 물건 선택됨 — 지도에서 위치를 클릭하세요';
+}
+function removePin(idx){pins=pins.filter(function(p){return p.idx!==idx});renderPinList();redrawCanvas();}
+function undoLast(){if(!pins.length)return;var last=pins.pop();activePin=last.idx;renderPinList();redrawCanvas();}
+function resetPins(){pins=[];activePin=0;renderPinList();redrawCanvas();if(mapImgSrc)document.getElementById('map-st').textContent='핀 초기화됨';}
+function clearAll(){
+  mapImgSrc=null;mapImg=null;mapConfirmedSrc=null;pins=[];activePin=-1;
+  var c=document.getElementById('map-canvas');c.style.display='none';
+  document.getElementById('map-ph').style.display='block';
+  document.getElementById('clear-map-btn').style.display='none';
+  document.getElementById('confirm-map-btn').style.display='none';
+  document.getElementById('map-st').textContent='지도 미업로드 — 이미지를 업로드하세요';
+  document.getElementById('map-st').className='map-st';
+  document.getElementById('confirmed-thumb').style.display='none';
+  document.getElementById('mi').value='';
+  renderPinList();upd();
+}
+function confirmMap(){
+  if(!mapImgSrc){alert('지도 이미지를 먼저 업로드하세요');return}
+  var c=document.getElementById('map-canvas');
+  mapConfirmedSrc=c.toDataURL('image/png');
+  document.getElementById('map-st').textContent='✓ 지도 확정 완료 — 핀 '+pins.length+'개 표시됨';
+  document.getElementById('map-st').className='map-st ok';
+  document.getElementById('confirm-map-btn').textContent='재확정';
+  document.getElementById('confirmed-thumb').style.display='block';
+  document.getElementById('confirmed-img').src=mapConfirmedSrc;
+  upd();
+}
+function build4(){
+  var sel=props.filter(function(p){return p.sel});
+  document.getElementById('sv1').textContent=sel.length;
+  document.getElementById('sv2').textContent=calcSlides(sel);
+  document.getElementById('sv3').textContent=sel.reduce(function(a,p){return a+p.photos.length+p.floors.length},0);
+  document.getElementById('sv4').textContent=mapConfirmedSrc?'포함':'생략';
+  document.getElementById('sv4s').textContent=mapConfirmedSrc?'핀 '+pins.length+'개 표시':'이미지 미등록';
+  var rows=[];
+  rows.push({num:'표지',g:true,type:'표지',desc:'C&W 브랜드 스타일'});
+  if(mapConfirmedSrc)rows.push({num:'지도',m:true,type:'물건 위치 지도',desc:'카카오맵 + 번호 핀 '+pins.length+'개',tags:['mp']});
+  rows.push({num:'목록',g:true,type:'물건 목록표',desc:'선택된 '+sel.length+'개 물건 요약'});
+  var sn=mapConfirmedSrc?4:3;
+  sel.forEach(function(p,i){
+    var hasP=p.photos.length>0,hasF=p.floors.length>0;
+    rows.push({num:sn++,type:'물건 '+(i+1)+' — Overview',desc:p.addr+' ('+p.floor+')',tags:[hasP?'ph':'sk',hasF?'fl_n':'']});
+    if(hasF)rows.push({num:sn++,type:'물건 '+(i+1)+' — Floor Plan',desc:'도면 슬라이드',tags:['fl']});
+  });
+  rows.push({num:'연락처',g:true,type:'연락처',desc:'Retail Leasing Group'});
+  document.getElementById('sflow').innerHTML=rows.map(function(r){
+    return '<div class="sfrow"><div class="sfnum '+(r.g?'g':r.m?'m':'')+'">'+r.num+'</div><div class="sfinfo"><div class="sftype">'+r.type+'</div><div class="sfdesc">'+r.desc+'</div></div><div class="sftags">'+(r.tags||[]).map(function(t){if(!t)return'';var cls=t==='ph'?'ph':t==='fl'||t==='fl_n'?'fl':t==='mp'?'mp':'sk';var lbl=t==='ph'?'사진있음':t==='fl'?'도면':t==='fl_n'?'다음:도면':t==='mp'?'지도':'사진없음';return'<span class="sftag '+cls+'">'+lbl+'</span>'}).join('')+'</div></div>';
+  }).join('');
+}
+function doGen(){
+  var sel=props.filter(function(p){return p.sel});
+  if(!sel.length){alert('물건을 선택하세요');return}
+  var client=document.getElementById('gclient').value||'(미입력)';
+  var advisor=document.getElementById('gadvisor').value||'(미입력)';
+  var mapInfo=mapConfirmedSrc?'지도 슬라이드: 포함 (번호 핀 '+pins.length+'개 표시된 카카오맵 이미지)\n':'지도 슬라이드: 생략\n';
+  var lines=sel.map(function(p,i){
+    return (i+1)+'. '+p.addr+' | '+p.floor+' | '+p.areaM+'㎡('+p.areaPy+'py) | 보증금 '+p.dep+' | 임대료 '+p.rent+' | 관리비 '+p.mgmt+' | 인도 '+p.handover+' | '+p.stat+' | '+(p.note||'-')+' | [매장사진:'+p.photos.length+'장/도면:'+p.floors.length+'장]';
+  }).join('\n');
+  var prompt='클라이언트: '+client+' / 담당: '+advisor+'\n\n아래 '+sel.length+'개 물건으로 C&W 스타일 물건제안서 PPT를 만들어줘.\n\n슬라이드 구성:\n1. 표지\n'+(mapConfirmedSrc?'2. 지도 슬라이드 (번호 핀이 표시된 카카오맵 이미지)\n':'')+(mapConfirmedSrc?'3':'2')+'. 물건 목록표\n'+(mapConfirmedSrc?'4':'3')+'번~. 물건별 Overview (매장사진 좌측 55% + 정보 우측 45%) — 도면 있으면 다음 슬라이드에 Floor Plan 추가, 없으면 다음 물건\n마지막. 연락처\n\n'+mapInfo+'\n물건 목록:\n'+lines;
+  document.getElementById('modal-text').textContent=prompt;
+  document.getElementById('modal-bg').className='modal-bg on';
+}
+function closeModal(){document.getElementById('modal-bg').className='modal-bg';}
+function copyText(){
+  var text=document.getElementById('modal-text').textContent;
+  navigator.clipboard.writeText(text).then(function(){
+    var btn=document.querySelector('.modal-ft .btn-red');
+    btn.textContent='✓ 복사됨';
+    setTimeout(function(){btn.textContent='📋 복사'},2000);
+  });
+}
+document.getElementById('modal-bg').addEventListener('click',function(e){if(e.target===this)closeModal();});
+upd();
+</script>
+</body>
+</html>
