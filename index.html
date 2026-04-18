@@ -171,7 +171,6 @@ body{font-family:'Noto Sans KR',sans-serif;font-size:13px;color:var(--text);back
   <div class="step" id="s4" onclick="gs(4)"><div class="snum" id="n4">4</div><div class="slbl">제안서 생성</div></div>
 </div>
 
-<!-- STEP 1 -->
 <div class="view on" id="v1">
   <div class="sec">엑셀 DB 업로드</div>
   <label class="uz" id="ez">
@@ -207,14 +206,13 @@ body{font-family:'Noto Sans KR',sans-serif;font-size:13px;color:var(--text);back
   </div>
 </div>
 
-<!-- STEP 2 -->
 <div class="view" id="v2">
   <div class="notice"><strong>이미지 업로드 방법</strong><br>폴더 안의 파일을 <strong>전체 선택(Ctrl+A)</strong>해서 업로드하세요. 파일명 규칙에 따라 자동 매핑됩니다. 이미지 없이 다음 단계로 넘어갈 수 있습니다.</div>
   <div class="sec">파일명 규칙</div>
   <div class="rulebox">
-    <div class="rrow"><div class="rdot" style="background:var(--green)"></div><div class="rtxt"><strong>매장 사진</strong> — Overview 슬라이드 좌측 배치<br>파일명에 <code>_사진</code> 또는 <code>_photo</code> 포함 &nbsp;예: <code>연무장길_14_사진1.jpg</code></div></div>
-    <div class="rrow"><div class="rdot" style="background:var(--blue)"></div><div class="rtxt"><strong>도면</strong> — Floor Plan 슬라이드 별도 생성 (없으면 건너뜀)<br>파일명에 <code>_도면</code> 또는 <code>_floor</code> 포함 &nbsp;예: <code>연무장길_14_도면.png</code></div></div>
-    <div class="rrow"><div class="rdot" style="background:#888780"></div><div class="rtxt"><strong>매핑 방식</strong> — 공백·언더스코어 무시하고 도로명+번지로 자동 연결<br>예: <code>연무장3길_9_사진1.jpg</code> → "연무장 3길 9" 자동 매핑</div></div>
+    <div class="rrow"><div class="rdot" style="background:var(--green)"></div><div class="rtxt"><strong>매장 사진</strong> — Overview 슬라이드 좌측 배치<br>파일명에 <code>사진</code> 또는 <code>photo</code> 포함 &nbsp;예: <code>연무장길_14_사진1.jpg</code> 또는 <code>연무장길 14 사진.jpg</code></div></div>
+    <div class="rrow"><div class="rdot" style="background:var(--blue)"></div><div class="rtxt"><strong>도면</strong> — Floor Plan 슬라이드 별도 생성 (없으면 건너뜀)<br>파일명에 <code>도면</code> 또는 <code>floor</code> 포함 &nbsp;예: <code>연무장길 14 도면.png</code></div></div>
+    <div class="rrow"><div class="rdot" style="background:#888780"></div><div class="rtxt"><strong>매핑 방식</strong> — 공백·기호 무시하고 주소 일부만 일치해도 자동 연결<br>예: <code>연무장3길 9 사진.jpg</code> → "연무장 3길 9" 자동 매핑</div></div>
   </div>
   <label class="uz" id="iz">
     <input type="file" accept="image/*" multiple style="display:none" id="ii" onchange="handleImgs(this)">
@@ -236,7 +234,6 @@ body{font-family:'Noto Sans KR',sans-serif;font-size:13px;color:var(--text);back
   </div>
 </div>
 
-<!-- STEP 3 -->
 <div class="view" id="v3">
   <div class="notice"><strong>사용법</strong> — ① 카카오맵(map.kakao.com) 캡처 이미지 업로드 → ② 오른쪽 목록에서 번호 클릭 → ③ 지도 위 위치 클릭하여 핀 배치 → ④ <strong>지도 확정</strong> 클릭<br>지도 없이 건너뛰면 지도 슬라이드가 생략됩니다.</div>
   <div class="map-step3">
@@ -278,7 +275,6 @@ body{font-family:'Noto Sans KR',sans-serif;font-size:13px;color:var(--text);back
   </div>
 </div>
 
-<!-- STEP 4 -->
 <div class="view" id="v4">
   <div class="scards">
     <div class="sc"><div class="sc-l">선택된 물건</div><div class="sc-v" id="sv1">0</div><div class="sc-s">개</div></div>
@@ -322,24 +318,89 @@ body{font-family:'Noto Sans KR',sans-serif;font-size:13px;color:var(--text);back
 var props=[],imgs=[],cur=1,mapSrc=null,mapConfSrc=null,pins=[],activePin=-1,mapImg=null;
 
 /* =============================================
-   핵심 매핑 함수
-   공백 / 언더스코어 / 쉼표 전부 제거 후 소문자 비교
+   핵심 매핑 함수 (최종 종결판)
    ============================================= */
 function norm(s){
-  return String(s||'').toLowerCase().replace(/[,\s_]+/g,'');
+  // 공백, 특수기호 전부 깔끔하게 무시
+  return String(s||'').toLowerCase().replace(/[^가-힣a-z0-9]/g,'');
 }
+
 function addrKey(addr){
-  return norm(addr.replace(/^서울\s*(특별시)?\s*/,'').replace(/^[가-힣]+[구군]\s*/,''));
+  // 1. 주소에 있는 (1F - 4F) 같은 괄호와 그 안의 내용을 통째로 날려버림
+  var s = addr.replace(/\([^)]*\)/g, '');
+  // 2. 서울, 서울시, 구 등 지역명 날림
+  s = s.replace(/^서울(시|특별시)?\s*/, '');
+  s = s.replace(/^[가-힣]+(도|시)\s*/, '');
+  s = s.replace(/^[가-힣]+[시구군]\s*/g, '');
+  return norm(s);
 }
+
 function fileKey(fname){
-  var base=fname.toLowerCase().replace(/\.(jpg|jpeg|png|gif|webp)$/i,'');
-  base=base.replace(/_사진\d*$/,'').replace(/_photo\d*$/,'');
-  base=base.replace(/_도면\d*$/,'').replace(/_floor\d*$/,'');
+  var base = fname.toLowerCase().replace(/\.(jpg|jpeg|png|gif|webp)$/i,'');
+  
+  // 파일명 중간이나 끝에 있는 '사진', 'photo', '도면' 글자를 찾아서
+  // 그 글자를 포함해 뒤에 붙은 숫자나 기호(예: 사진1, 사진_2, 도면_최종 등)를 전부 잘라냄
+  var matchIdx = base.search(/사진|photo|도면|floor/i);
+  if(matchIdx > 0) {
+    base = base.substring(0, matchIdx); 
+  } else {
+    // 만약 파일명 맨 앞에 '사진'이 있거나 없으면 글자만 지움
+    base = base.replace(/사진|photo|도면|floor/g, '');
+  }
   return norm(base);
 }
+
 function findProp(fname){
-  var fk=fileKey(fname);
-  return props.find(function(p){return addrKey(p.addr)===fk;});
+  var fk = fileKey(fname);
+  
+  // 1순위: 주소 핵심 키워드가 완벽하게 일치하는지 확인 (대부분 여기서 100% 매칭됨)
+  var exact = props.find(function(p){ return addrKey(p.addr) === fk; });
+  if(exact) return exact;
+  
+  // 2순위: 혹시 모를 오타를 대비해 포함 관계 확인
+  return props.find(function(p){
+    var ak = addrKey(p.addr);
+    return ak.includes(fk) || fk.includes(ak);
+  });
+}
+
+function runMap(){
+  props.forEach(function(p){p.photos=[];p.floors=[];});
+  var unm=[];
+  imgs.forEach(function(img){
+    var nl = img.name.toLowerCase();
+    
+    var isF = nl.includes('도면') || nl.includes('floor');
+    
+    var matched = findProp(img.name);
+    if(matched){
+      if(isF) matched.floors.push(img.src);
+      else matched.photos.push(img.src);
+    } else {
+      unm.push(img.name);
+    }
+  });
+  renderImt(unm);upd();
+}
+
+function renderImt(unm){
+  document.getElementById('imtwrap').style.display='block';
+  var sel=props.filter(function(p){return p.sel});
+  var tb=document.getElementById('imtb');
+  if(!sel.length){tb.innerHTML='<tr><td colspan="3" style="padding:13px;text-align:center;color:var(--text3)">Step 1에서 물건을 먼저 선택하세요</td></tr>';return;}
+  tb.innerHTML=sel.map(function(p){
+    return '<tr><td style="font-size:11px">'+p.addr+'</td>'
+      +'<td>'+(p.photos.length?'<div class="trow">'+p.photos.map(function(s){return'<img class="thumb" src="'+s+'">'}).join('')+'</div>':'<span style="font-size:10px;color:var(--text3)">없음</span>')+'</td>'
+      +'<td>'+(p.floors.length?'<div class="trow">'+p.floors.map(function(s){return'<img class="thumb" src="'+s+'">'}).join('')+'</div>':'<span style="font-size:10px;color:var(--text3)">없음 (생략)</span>')+'</td></tr>';
+  }).join('');
+  
+  var uw=document.getElementById('unmwrap');
+  if(unm.length){
+    uw.style.display='block';
+    document.getElementById('unmlist').innerHTML=unm.map(function(n){return'<div>• '+n+'</div>'}).join('');
+  } else {
+    uw.style.display='none';
+  }
 }
 /* ============================================= */
 
@@ -437,34 +498,7 @@ function handleImgs(inp){
     };r.readAsDataURL(f);
   });
 }
-function runMap(){
-  props.forEach(function(p){p.photos=[];p.floors=[];});
-  var unm=[];
-  imgs.forEach(function(img){
-    var nl=img.name.toLowerCase();
-    var isP=nl.includes('_사진')||nl.includes('_photo');
-    var isF=nl.includes('_도면')||nl.includes('_floor');
-    if(!isP&&!isF){unm.push(img.name);return;}
-    var matched=findProp(img.name);
-    if(matched){if(isP)matched.photos.push(img.src);else matched.floors.push(img.src);}
-    else unm.push(img.name);
-  });
-  renderImt(unm);upd();
-}
-function renderImt(unm){
-  document.getElementById('imtwrap').style.display='block';
-  var sel=props.filter(function(p){return p.sel});
-  var tb=document.getElementById('imtb');
-  if(!sel.length){tb.innerHTML='<tr><td colspan="3" style="padding:13px;text-align:center;color:var(--text3)">Step 1에서 물건을 먼저 선택하세요</td></tr>';return;}
-  tb.innerHTML=sel.map(function(p){
-    return '<tr><td style="font-size:11px">'+p.addr+'</td>'
-      +'<td>'+(p.photos.length?'<div class="trow">'+p.photos.map(function(s){return'<img class="thumb" src="'+s+'">'}).join('')+'</div>':'<span style="font-size:10px;color:var(--text3)">없음</span>')+'</td>'
-      +'<td>'+(p.floors.length?'<div class="trow">'+p.floors.map(function(s){return'<img class="thumb" src="'+s+'">'}).join('')+'</div>':'<span style="font-size:10px;color:var(--text3)">없음 (생략)</span>')+'</td></tr>';
-  }).join('');
-  var uw=document.getElementById('unmwrap');
-  if(unm.length){uw.style.display='block';document.getElementById('unmlist').innerHTML=unm.map(function(n){return'<div>• '+n+'</div>'}).join('');}
-  else uw.style.display='none';
-}
+
 function loadMapImg(inp){
   var f=inp.files[0];if(!f)return;
   var r=new FileReader();
